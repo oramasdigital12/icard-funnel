@@ -30,10 +30,18 @@ export const enviarLeadAFacturaPro = async (formData: {
   telefono: string;
 }): Promise<ApiResponse> => {
   try {
+    // Limpiar y validar el teléfono
+    const telefonoLimpio = formData.telefono.replace(/[\s\-\(\)]/g, '');
+    
+    // Validar que el teléfono tenga exactamente 10 dígitos
+    if (telefonoLimpio.length !== 10) {
+      throw new Error(`El teléfono debe tener exactamente 10 dígitos. Recibido: ${telefonoLimpio.length} dígitos`);
+    }
+
     // Preparar los datos del lead
     const leadData: LeadData = {
       nombre: formData.nombre.trim(),
-      telefono: formData.telefono.replace(/[\s\-\(\)]/g, ''), // Limpiar formato
+      telefono: telefonoLimpio,
       proviene: API_CONFIG.LEAD_SOURCE,
       categoria: API_CONFIG.REQUIRED_FIELDS.categoria,
       fecha_inicio: API_CONFIG.REQUIRED_FIELDS.fecha_inicio,
@@ -41,12 +49,15 @@ export const enviarLeadAFacturaPro = async (formData: {
       user_id: getUserId()
     };
 
+    // Log para debug
+    console.log('📤 Datos que se enviarán a la API:', leadData);
+
     // Obtener la URL de la API
     const apiUrl = getApiUrl();
     const token = getApiToken();
 
     // Verificar que el token y user_id estén configurados
-    if (token === 'YOUR_JWT_TOKEN_HERE' || getUserId() === 'YOUR_USER_ID_HERE') {
+    if (!token || !getUserId() || token.includes('YOUR_') || getUserId().includes('YOUR_')) {
       console.warn('⚠️ API Token o User ID no configurados. Usando modo de prueba.');
       return {
         success: false,
@@ -103,7 +114,7 @@ export const validarConfiguracionAPI = (): boolean => {
   const token = getApiToken();
   const userId = getUserId();
   
-  return token !== 'YOUR_JWT_TOKEN_HERE' && userId !== 'YOUR_USER_ID_HERE';
+  return !!(token && userId && !token.includes('YOUR_') && !userId.includes('YOUR_'));
 };
 
 // Función para obtener el estado de la configuración
@@ -112,8 +123,8 @@ export const getEstadoConfiguracion = () => {
   const userId = getUserId();
   
   return {
-    tokenConfigurado: token !== 'YOUR_JWT_TOKEN_HERE',
-    userIdConfigurado: userId !== 'YOUR_USER_ID_HERE',
+    tokenConfigurado: !!(token && !token.includes('YOUR_')),
+    userIdConfigurado: !!(userId && !userId.includes('YOUR_')),
     apiUrl: getApiUrl(),
     completamenteConfigurado: validarConfiguracionAPI()
   };
