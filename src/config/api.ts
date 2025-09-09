@@ -10,8 +10,8 @@ export const API_CONFIG = {
   // Campos obligatorios para la API
   REQUIRED_FIELDS: {
     categoria: 'lead',
-    fecha_inicio: '9999-12-31',
-    fecha_vencimiento: '9999-12-31'
+    fecha_inicio: new Date().toISOString().split('T')[0], // Fecha de hoy
+    fecha_vencimiento: new Date().toISOString().split('T')[0] // Fecha de hoy
   }
 };
 
@@ -30,10 +30,10 @@ export const getApiToken = () => {
   return 'eyJhbGciOiJIUzI1NiIsImtpZCI6IjRBZDVjMExuM2kzV0tub2MiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3V6bmRoenFweXdpeHB4bHB4enNsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI0YjBlNzMzYi1kM2U3LTRjZTgtYmExZi01OGM2NGIwMTM0ODIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzU3NDU1MDU4LCJpYXQiOjE3NTc0NTE0NTgsImVtYWlsIjoiZGVtb0BnbWFpbC5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoiZGVtb0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiZGVtbyIsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiNGIwZTczM2ItZDNlNy00Y2U4LWJhMWYtNThjNjRiMDEzNDgyIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NTc0NTE0NTh9XSwic2Vzc2lvbl9pZCI6IjA3NjBhYmQ5LWUyZTYtNDUzMS1hMzhhLWU4YjM2YzdhOWY4MSIsImlzX2Fub255bW91cyI6ZmFsc2V9.eEeeyaKsTTYW7UFRaZiaQbtHL6Y8HZticv5XrWD-9sM';
   
   // Opción alternativa: Token desde localStorage (si prefieres configuración dinámica)
-  // const userData = getSupabaseUserData();
-  // if (userData && !userData.isExpired) {
-  //   return userData.jwtToken;
-  // }
+    // const userData = getSupabaseUserData();
+    // if (userData && !userData.isExpired) {
+    //   return userData.jwtToken;
+    // }
   
   // Opción alternativa: Token desde variable de entorno
   // return import.meta.env.VITE_LEADSPRO_JWT_TOKEN || 'YOUR_JWT_TOKEN_HERE';
