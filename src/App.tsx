@@ -5,6 +5,8 @@ import banner2 from './img/banner2.jpg'
 import banner3 from './img/banner3.jpg'
 import IGLogo from './img/IG.png'
 import FBLogo from './img/FB.png'
+import { enviarLeadAFacturaPro, validarConfiguracionAPI } from './services/leadService'
+import { debugSupabaseAuth } from './utils/supabaseHelper'
 
 const professionalInfo = {
   name: 'Tu Guía Digital',
@@ -40,6 +42,8 @@ function App() {
     nombre: '',
     telefono: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiConfigurada, setApiConfigurada] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -47,6 +51,15 @@ function App() {
         prev === professionalInfo.feedbacks.length - 1 ? 0 : prev + 1
       );
     }, 3000);
+
+    // Verificar si la API está configurada
+    setApiConfigurada(validarConfiguracionAPI());
+    
+    // Debug de Supabase Auth (solo en desarrollo)
+    if (import.meta.env.DEV) {
+      console.log('🔧 Modo desarrollo - Debug de Supabase Auth:');
+      debugSupabaseAuth();
+    }
 
     return () => {
       clearInterval(timer);
@@ -129,7 +142,7 @@ function App() {
     return { isValid: true, message: '' };
   };
 
-  const handleFormSubmit = () => {
+  const handleFormSubmit = async () => {
     // Validar campos obligatorios
     if (!formData.nombre || !formData.telefono) {
       alert('Por favor completa el nombre y teléfono');
@@ -149,18 +162,45 @@ function App() {
       return;
     }
 
-    // Aquí se enviará al CRM cuando esté configurado
-    const leadData = {
-      nombre: formData.nombre.trim(),
-      telefono: formData.telefono.replace(/[\s\-\(\)]/g, ''), // Limpiar formato
-      timestamp: new Date().toISOString()
-    };
+    // Activar loading
+    setIsLoading(true);
 
-    console.log('Lead data:', leadData);
-    
-    // Por ahora, enviar directamente a WhatsApp
-    const message = `Hola! Me llamo ${formData.nombre.trim()}, mi teléfono es ${formData.telefono}. Me gustaría obtener más información sobre sus servicios.`;
-    handleWhatsApp(message);
+    try {
+      // Intentar enviar el lead a FacturaPro si está configurado
+      if (apiConfigurada) {
+        console.log('📤 Enviando lead a FacturaPro...');
+        const result = await enviarLeadAFacturaPro({
+          nombre: formData.nombre,
+          telefono: formData.telefono
+        });
+
+        if (result.success) {
+          console.log('✅ Lead registrado exitosamente en FacturaPro');
+        } else {
+          console.warn('⚠️ Error al registrar lead en FacturaPro:', result.message);
+          // Continuar con WhatsApp aunque falle la API
+        }
+      } else {
+        console.log('ℹ️ API no configurada, enviando solo a WhatsApp');
+      }
+
+      // Preparar mensaje para WhatsApp
+      const message = `Hola! Me llamo ${formData.nombre.trim()}, mi teléfono es ${formData.telefono}. Me gustaría obtener más información sobre sus servicios.`;
+      
+      // Redirigir a WhatsApp
+      handleWhatsApp(message);
+
+    } catch (error) {
+      console.error('❌ Error en el proceso:', error);
+      alert('Hubo un error al procesar tu solicitud. Te redirigiremos a WhatsApp.');
+      
+      // Redirigir a WhatsApp aunque haya error
+      const message = `Hola! Me llamo ${formData.nombre.trim()}, mi teléfono es ${formData.telefono}. Me gustaría obtener más información sobre sus servicios.`;
+      handleWhatsApp(message);
+    } finally {
+      // Desactivar loading
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -306,9 +346,12 @@ function App() {
             
             <button
               onClick={handleFormSubmit}
+              disabled={isLoading}
               style={{
                 width: '100%',
-                background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                background: isLoading 
+                  ? 'linear-gradient(135deg, #666 0%, #555 100%)' 
+                  : 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '12px',
@@ -316,27 +359,48 @@ function App() {
                 fontWeight: '600',
                 fontSize: '1.1rem',
                 marginTop: '1.5rem',
-                boxShadow: '0 4px 16px rgba(37, 211, 102, 0.3)',
-                cursor: 'pointer',
+                boxShadow: isLoading 
+                  ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
+                  : '0 4px 16px rgba(37, 211, 102, 0.3)',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '0.5rem'
+                gap: '0.5rem',
+                opacity: isLoading ? 0.7 : 1
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(37, 211, 102, 0.4)';
+                if (!isLoading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(37, 211, 102, 0.4)';
+                }
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(37, 211, 102, 0.3)';
+                if (!isLoading) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(37, 211, 102, 0.3)';
+                }
               }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 1.856.001 3.598.723 4.907 2.034 1.31 1.311 2.031 3.054 2.03 4.908-.001 3.825-3.113 6.938-6.937 6.938z"/>
-              </svg>
-            Hablemos por WhatsApp!
+              {isLoading ? (
+                <>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeDasharray="31.416" strokeDashoffset="31.416">
+                      <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                      <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                    </circle>
+                  </svg>
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 1.856.001 3.598.723 4.907 2.034 1.31 1.311 2.031 3.054 2.03 4.908-.001 3.825-3.113 6.938-6.937 6.938z"/>
+                  </svg>
+                  Hablemos por WhatsApp!
+                </>
+              )}
             </button>
           </div>
 
