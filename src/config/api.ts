@@ -7,33 +7,31 @@ export const API_CONFIG = {
   // Configuración del lead
   LEAD_SOURCE: 'Tu Guía Digital',
   
-  // Campos obligatorios para la API
+  // Campos obligatorios para la API (v2.0 - simplificado)
   REQUIRED_FIELDS: {
-    categoria: 'lead',
-    fecha_inicio: new Date().toISOString().split('T')[0], // Fecha de hoy
-    fecha_vencimiento: new Date().toISOString().split('T')[0] // Fecha de hoy
+    categoria: 'lead' // Solo categoria es obligatorio según v2.0
   }
 };
 
 // Función para obtener la URL de la API según el entorno
 export const getApiUrl = () => {
-  // En producción, usar la URL de producción
-  // En desarrollo, usar la URL de desarrollo
-  return import.meta.env.PROD ? API_CONFIG.PRODUCTION_URL : API_CONFIG.DEVELOPMENT_URL;
+  // Usar siempre la URL de producción para el funnel
+  // El servidor local no está configurado con el API Token
+  return API_CONFIG.PRODUCTION_URL;
 };
 
 // import { getSupabaseUserData } from '../utils/supabaseHelper';
 
-// Función para obtener el token JWT desde LeadsPro
+// Función para obtener el API Token desde LeadsPro
 export const getApiToken = () => {
-  // Token fijo desde LeadsPro (configura aquí tu JWT token)
-  return 'eyJhbGciOiJIUzI1NiIsImtpZCI6IjRBZDVjMExuM2kzV0tub2MiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3V6bmRoenFweXdpeHB4bHB4enNsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI0YjBlNzMzYi1kM2U3LTRjZTgtYmExZi01OGM2NGIwMTM0ODIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzU3NDU1MDU4LCJpYXQiOjE3NTc0NTE0NTgsImVtYWlsIjoiZGVtb0BnbWFpbC5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoiZGVtb0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiZGVtbyIsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiNGIwZTczM2ItZDNlNy00Y2U4LWJhMWYtNThjNjRiMDEzNDgyIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NTc0NTE0NTh9XSwic2Vzc2lvbl9pZCI6IjA3NjBhYmQ5LWUyZTYtNDUzMS1hMzhhLWU4YjM2YzdhOWY4MSIsImlzX2Fub255bW91cyI6ZmFsc2V9.eEeeyaKsTTYW7UFRaZiaQbtHL6Y8HZticv5XrWD-9sM';
+  // API Token fijo desde LeadsPro (v2.0 - 64 caracteres hexadecimales)
+  return 'e8d4fb563e791ac66e0296ddff8f9da2ffb9f7e1796b8258258bd950a0eb59cd';
   
   // Opción alternativa: Token desde localStorage (si prefieres configuración dinámica)
-    // const userData = getSupabaseUserData();
-    // if (userData && !userData.isExpired) {
-    //   return userData.jwtToken;
-    // }
+  // const userData = getSupabaseUserData();
+  // if (userData && !userData.isExpired) {
+  //   return userData.jwtToken;
+  // } 
   
   // Opción alternativa: Token desde variable de entorno
   // return import.meta.env.VITE_LEADSPRO_JWT_TOKEN || 'YOUR_JWT_TOKEN_HERE';
