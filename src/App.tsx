@@ -106,10 +106,29 @@ function App() {
 
   const handleWhatsApp = (message?: string) => {
     const defaultMessage = `Hola, me gustaría obtener más información sobre sus servicios.`;
-    window.open(
-      `https://wa.me/${professionalInfo.whatsapp}?text=${encodeURIComponent(message || defaultMessage)}`,
-      '_blank'
-    );
+    const whatsappUrl = `https://wa.me/${professionalInfo.whatsapp}?text=${encodeURIComponent(message || defaultMessage)}`;
+    
+    // Detectar si es móvil
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    try {
+      if (isMobile) {
+        // En móvil, intentar abrir directamente en la app
+        window.location.href = whatsappUrl;
+      } else {
+        // En desktop, usar window.open
+        const newWindow = window.open(whatsappUrl, '_blank');
+        
+        // Si window.open falla (por bloqueador de popups), usar location.href como fallback
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+          window.location.href = whatsappUrl;
+        }
+      }
+    } catch (error) {
+      console.error('Error al abrir WhatsApp:', error);
+      // Fallback: siempre usar location.href si hay algún error
+      window.location.href = whatsappUrl;
+    }
   };
 
   // Función para validar número de teléfono
