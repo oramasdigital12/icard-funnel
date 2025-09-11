@@ -5,6 +5,7 @@ import banner2 from './img/banner2.jpg'
 import banner3 from './img/banner3.jpg'
 import IGLogo from './img/IG.png'
 import FBLogo from './img/FB.png'
+import promoVideo from './assets/promo.mp4'
 import { enviarLeadAFacturaPro, validarConfiguracionAPI } from './services/leadService'
 import { debugSupabaseAuth } from './utils/supabaseHelper'
 
@@ -229,7 +230,20 @@ function App() {
 
       <div className="container">
         <div className="card">
-          {/* Feedback Slideshow at the top */}
+          {/* Video Promocional */}
+          <div className="feedback-section-top">
+            <video
+              className="banner-image"
+              autoPlay
+              muted
+              loop
+              playsInline
+            >
+              <source src={promoVideo} type="video/mp4" />
+            </video>
+          </div>
+
+          {/* Feedback Slideshow */}
           <div className="feedback-section-top">
             <div className="feedback-slideshow">
               {professionalInfo.feedbacks.map((feedback, index) => (

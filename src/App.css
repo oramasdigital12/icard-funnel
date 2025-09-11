@@ -51,6 +51,20 @@ body {
   border-radius: 24px 24px 0 0;
 }
 
+/* Contenedor del video */
+.feedback-section-top:first-of-type {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px 24px 0 0;
+  margin-bottom: 0;
+}
+
+/* Slideshow después del video */
+.feedback-section-top:nth-of-type(2) {
+  border-radius: 0;
+  margin-top: 0;
+}
+
 .feedback-slideshow {
   position: relative;
   width: 100%;
@@ -77,9 +91,22 @@ body {
   object-fit: cover;
 }
 
+/* Estilos específicos para el video */
+video.banner-image {
+  object-fit: fill;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  min-width: 100%;
+  min-height: 100%;
+}
+
 /* Header del card */
 .card-header {
-  padding: 2rem 2rem 1rem;
+  padding: 1rem 2rem 1rem;
   text-align: center;
 }
 
@@ -232,8 +259,16 @@ body {
     border-radius: 20px 20px 0 0;
   }
   
+  .feedback-section-top:first-of-type {
+    border-radius: 20px 20px 0 0;
+  }
+  
+  .feedback-section-top:nth-of-type(2) {
+    border-radius: 0;
+  }
+  
   .card-header {
-    padding: 1.5rem 1.5rem 1rem;
+    padding: 0.5rem 1.5rem 1rem;
   }
   
   .title {
@@ -291,7 +326,7 @@ body {
   }
   
   .card-header {
-    padding: 1rem 1rem 0.5rem;
+    padding: 0.5rem 1rem 0.5rem;
   }
   
   .avatar {
