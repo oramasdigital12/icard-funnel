@@ -25,7 +25,7 @@ export const getApiUrl = () => {
 // Función para obtener el API Token desde LeadsPro
 export const getApiToken = () => {
   // API Token fijo desde LeadsPro (v2.0 - 64 caracteres hexadecimales)
-  return 'e8d4fb563e791ac66e0296ddff8f9da2ffb9f7e1796b8258258bd950a0eb59cd';
+  return 'c0fedf4fe1cb3930c985fa52d0802dc72ea8fbcc3b6bd099ce7e8956c906c67c';
   
   // Opción alternativa: Token desde localStorage (si prefieres configuración dinámica)
   // const userData = getSupabaseUserData();
