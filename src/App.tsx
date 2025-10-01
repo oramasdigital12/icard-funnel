@@ -3,9 +3,9 @@ import logoImage from './img/logo.jpg'
 import banner1 from './img/banner1.jpg'
 import banner2 from './img/banner2.jpg'
 import banner3 from './img/banner3.jpg'
-import IGLogo from './img/IG.png'
-import FBLogo from './img/FB.png'
-import promoVideo from './assets/promo.mp4'
+// import IGLogo from './img/IG.png' // Comentado - no se usa en la versión optimizada
+// import FBLogo from './img/FB.png' // Comentado - no se usa en la versión optimizada
+// import promoVideo from './assets/promo.mp4' // Comentado - no se usa en la versión optimizada
 import { enviarLeadAFacturaPro, validarConfiguracionAPI } from './services/leadService'
 import { debugSupabaseAuth } from './utils/supabaseHelper'
 
@@ -25,14 +25,17 @@ const professionalInfo = {
     {
       id: 1,
       image: banner1,
+      category: 'Talleres'
     },
     {
       id: 2,
       image: banner2,
+      category: 'Cursos'
     },
     {
       id: 3,
       image: banner3,
+      category: 'Tecnología'
     }
   ]
 }
@@ -44,7 +47,15 @@ function App() {
     telefono: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isMicroLoading, setIsMicroLoading] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [showWhatsAppLink, setShowWhatsAppLink] = useState(false);
   const [apiConfigurada, setApiConfigurada] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({
+    nombre: '',
+    telefono: ''
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -163,26 +174,50 @@ function App() {
   };
 
   const handleFormSubmit = async () => {
-    // Validar campos obligatorios
-    if (!formData.nombre || !formData.telefono) {
-      alert('Por favor completa el nombre y teléfono');
-      return;
+    // Verificar honeypot anti-spam
+    const honeypotValue = (document.querySelector('input[name="website"]') as HTMLInputElement)?.value;
+    if (honeypotValue && honeypotValue.trim() !== '') {
+      console.log('🚫 Spam detectado, abortando envío');
+      return; // Abortar silenciosamente
     }
 
-    // Validar nombre (mínimo 2 caracteres)
-    if (formData.nombre.trim().length < 2) {
-      alert('El nombre debe tener al menos 2 caracteres');
-      return;
+    // Limpiar errores previos
+    setValidationErrors({ nombre: '', telefono: '' });
+    
+    let hasErrors = false;
+    const newErrors = { nombre: '', telefono: '' };
+
+    // Validar nombre
+    if (!formData.nombre || formData.nombre.trim().length < 2) {
+      newErrors.nombre = 'Solo necesitamos tu nombre para continuar 🚀';
+      hasErrors = true;
     }
 
     // Validar teléfono
-    const phoneValidation = validatePhoneNumber(formData.telefono);
-    if (!phoneValidation.isValid) {
-      alert(phoneValidation.message);
+    if (!formData.telefono) {
+      newErrors.telefono = 'Necesitamos tu número para enviarte el mensaje 📲';
+      hasErrors = true;
+    } else {
+      const phoneValidation = validatePhoneNumber(formData.telefono);
+      if (!phoneValidation.isValid) {
+        newErrors.telefono = phoneValidation.message;
+        hasErrors = true;
+      }
+    }
+
+    if (hasErrors) {
+      setValidationErrors(newErrors);
       return;
     }
 
-    // Activar loading
+    // Activar micro-loading primero
+    setIsMicroLoading(true);
+    
+    // Esperar 1 segundo para el micro-loading
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Activar loading principal
+    setIsMicroLoading(false);
     setIsLoading(true);
 
     try {
@@ -204,22 +239,48 @@ function App() {
         console.log('ℹ️ API no configurada, enviando solo a WhatsApp');
       }
 
+      // Mostrar estado de guardado
+      setIsLoading(false);
+      setIsSaved(true);
+
       // Preparar mensaje para WhatsApp
       const message = `Hola! Me llamo ${formData.nombre.trim()}, mi teléfono es ${formData.telefono}. Me gustaría obtener más información sobre sus servicios.`;
       
-      // Redirigir a WhatsApp
-      handleWhatsApp(message);
+      // Intentar abrir WhatsApp
+      const whatsappUrl = `https://wa.me/${professionalInfo.whatsapp}?text=${encodeURIComponent(message)}`;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      let opened = false;
+      try {
+        if (isMobile) {
+          window.location.href = whatsappUrl;
+          opened = true;
+        } else {
+          const newWindow = window.open(whatsappUrl, '_blank');
+          if (newWindow && !newWindow.closed) {
+            opened = true;
+          }
+        }
+      } catch (error) {
+        console.error('Error al abrir WhatsApp:', error);
+      }
+
+      // Si no se abrió WhatsApp en 2 segundos, mostrar enlace
+      if (!opened) {
+        setTimeout(() => {
+          setShowWhatsAppLink(true);
+        }, 2000);
+      }
 
     } catch (error) {
       console.error('❌ Error en el proceso:', error);
-      alert('Hubo un error al procesar tu solicitud. Te redirigiremos a WhatsApp.');
-      
       // Redirigir a WhatsApp aunque haya error
       const message = `Hola! Me llamo ${formData.nombre.trim()}, mi teléfono es ${formData.telefono}. Me gustaría obtener más información sobre sus servicios.`;
       handleWhatsApp(message);
     } finally {
       // Desactivar loading
       setIsLoading(false);
+      setIsMicroLoading(false);
     }
   };
 
@@ -230,7 +291,8 @@ function App() {
 
       <div className="container">
         <div className="card">
-          {/* Video Promocional */}
+          {/* Video Promocional - COMENTADO PARA OPTIMIZAR CONVERSIÓN */}
+          {/* 
           <div className="feedback-section-top">
             <video
               className="banner-image"
@@ -242,6 +304,7 @@ function App() {
               <source src={promoVideo} type="video/mp4" />
             </video>
           </div>
+          */}
 
           {/* Feedback Slideshow */}
           <div className="feedback-section-top">
@@ -252,6 +315,38 @@ function App() {
                   className={`feedback-slide ${index === currentFeedback ? 'active' : ''}`}
                 >
                   <img src={feedback.image} alt={`Feedback ${feedback.id}`} className="banner-image" />
+                  
+                  {/* Etiqueta identificativa - Esquina superior derecha */}
+                  {/* <div 
+                    style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      right: '1rem',
+                      background: 'rgba(0, 0, 0, 0.85)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.75rem',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      zIndex: 1000,
+                      opacity: index === currentFeedback ? 1 : 0,
+                      transition: 'opacity 0.3s ease-in-out',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: '#fff',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        margin: 0,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.8)'
+                      }}
+                    >
+                      {feedback.category || 'Testimonio'}
+                    </p>
+                  </div> */}
                 </div>
               ))}
             </div>
@@ -272,10 +367,33 @@ function App() {
               <h1 className="title">{professionalInfo.name}</h1>
               <h2 className="subtitle">{professionalInfo.title}</h2>
               <p className="description">{professionalInfo.description}</p>
+              
+              {/* Validación Social */}
+              <div style={{
+                marginTop: '1rem',
+                padding: '0.75rem 1.5rem',
+                background: 'rgba(37, 211, 102, 0.1)',
+                border: '1px solid rgba(37, 211, 102, 0.3)',
+                borderRadius: '12px',
+                textAlign: 'center'
+              }}>
+                <span style={{
+                  color: '#25D366',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}>
+                  ⭐ Más de 300 personas ya se comunicaron por aquí.
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Redes Sociales y Contacto */}
+          {/* Redes Sociales y Contacto - COMENTADO PARA OPTIMIZAR CONVERSIÓN */}
+          {/* 
           <div className="social-section" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
             <a href="https://www.instagram.com/tuguiadigitalpr?igsh=bm01dnV6YjBjNm1m&utm_source=qr" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)', borderRadius: '50%', width: 56, height: 56, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', overflow: 'hidden', transition: 'transform 0.2s' }}>
               <img src={IGLogo} alt="Instagram" style={{ width: 32, height: 32, objectFit: 'cover' }} />
@@ -293,149 +411,319 @@ function App() {
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
               </svg>
             </a>
-            {/* <a href={`mailto:${professionalInfo.email}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)', borderRadius: '50%', width: 56, height: 56, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', overflow: 'hidden', transition: 'transform 0.2s' }}>
-              <svg width="28" height="28" fill="#fff" viewBox="0 0 24 24">
-                <path d="M12 13.065l-8-5.065v10h16v-10l-8 5.065zm8-7.065v-.001l-8 5.066-8-5.066v-.001h16zm-16-2c-1.104 0-2 .896-2 2v16c0 1.104.896 2 2 2h16c1.104 0 2-.896 2-2v-16c0-1.104-.896-2-2-2h-16z"/>
-              </svg>
-            </a>
-            <a href={`tel:${professionalInfo.phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)', borderRadius: '50%', width: 56, height: 56, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', overflow: 'hidden', transition: 'transform 0.2s' }}>
-              <svg width="28" height="28" fill="#fff" viewBox="0 0 24 24">
-                <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1.003 1.003 0 011.01-.24c1.12.37 2.33.57 3.59.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.29 21 3 13.71 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.26.2 2.47.57 3.59.09.27.03.57-.24 1.01l-2.21 2.19z"/>
-              </svg>
-            </a> */}
           </div>
+          */}
 
-          {/* Formulario de Lead */}
-          <div className="lead-form" style={{ 
-            background: 'rgba(255,255,255,0.05)', 
-            borderRadius: '20px', 
-            padding: '2rem', 
-            marginBottom: '2rem',
-            border: '1px solid rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(10px)'
+          {/* Call-to-Action Principal */}
+          <div style={{ 
+            padding: '0 2rem 2rem 2rem',
+            textAlign: 'center',
+            display: showForm ? 'none' : 'block'
           }}>
-            <h3 style={{ 
-              color: '#fff', 
-              fontSize: '1.5rem', 
-              fontWeight: '600', 
-              marginBottom: '1.5rem',
-              textAlign: 'center'
-            }}>
-              ¡Obtén más información!
-            </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div>
-                <input
-                  type="text"
-                  name="nombre"
-                  placeholder="Tu Nombre & Apellido*"
-                  value={formData.nombre}
-                  onChange={handleInputChange}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '1.2rem',
-                    borderRadius: '12px',
-                    border: '2px solid rgba(255,255,255,0.2)',
-                    background: 'rgba(255,255,255,0.1)',
-                    color: '#fff',
-                    fontSize: '1.1rem',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#00B4DB'}
-                  onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.2)'}
-                />
-              </div>
-              
-              <div>
-                <input
-                  type="tel"
-                  name="telefono"
-                  placeholder="(787) 123-4567 *"
-                  value={formData.telefono}
-                  onChange={handleInputChange}
-                  required
-                  maxLength={14}
-                  style={{
-                    width: '100%',
-                    padding: '1.2rem',
-                    borderRadius: '12px',
-                    border: '2px solid rgba(255,255,255,0.2)',
-                    background: 'rgba(255,255,255,0.1)',
-                    color: '#fff',
-                    fontSize: '1.1rem',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#00B4DB'}
-                  onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.2)'}
-                />
-              </div>
-            </div>
-            
             <button
-              onClick={handleFormSubmit}
-              disabled={isLoading}
+              onClick={() => {
+                setShowForm(true);
+                // Scroll suave al formulario después de que se expanda
+                setTimeout(() => {
+                  const formElement = document.querySelector('.lead-form');
+                  if (formElement) {
+                    formElement.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'center' 
+                    });
+                  }
+                }, 100);
+              }}
               style={{
                 width: '100%',
-                background: isLoading 
-                  ? 'linear-gradient(135deg, #666 0%, #555 100%)' 
-                  : 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '12px',
-                padding: '1rem 2rem',
+                padding: '1.2rem 2rem',
                 fontWeight: '600',
-                fontSize: '1.1rem',
-                marginTop: '1.5rem',
-                boxShadow: isLoading 
-                  ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-                  : '0 4px 16px rgba(37, 211, 102, 0.3)',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontSize: '1.2rem',
+                boxShadow: '0 4px 16px rgba(37, 211, 102, 0.3)',
+                cursor: 'pointer',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                opacity: isLoading ? 0.7 : 1
+                minHeight: '48px'
               }}
               onMouseOver={(e) => {
-                if (!isLoading) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(37, 211, 102, 0.4)';
-                }
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(37, 211, 102, 0.4)';
               }}
               onMouseOut={(e) => {
-                if (!isLoading) {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(37, 211, 102, 0.3)';
-                }
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(37, 211, 102, 0.3)';
               }}
             >
-              {isLoading ? (
-                <>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeDasharray="31.416" strokeDashoffset="31.416">
-                      <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
-                      <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
-                    </circle>
-                  </svg>
-                  Procesando...
-                </>
-              ) : (
-                <>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 1.856.001 3.598.723 4.907 2.034 1.31 1.311 2.031 3.054 2.03 4.908-.001 3.825-3.113 6.938-6.937 6.938z"/>
-            </svg>
-                  Hablemos por WhatsApp!
-                </>
-              )}
-                  </button>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 1.856.001 3.598.723 4.907 2.034 1.31 1.311 2.031 3.054 2.03 4.908-.001 3.825-3.113 6.938-6.937 6.938z"/>
+              </svg>
+              📲 Habla ahora por WhatsApp
+            </button>
+          </div>
+
+          {/* Formulario Inline Expandible */}
+          {showForm && (
+            <div className="lead-form" style={{ 
+              background: 'rgba(255,255,255,0.05)', 
+              borderRadius: '20px', 
+              padding: '2rem', 
+              margin: '0 2rem 2rem 2rem',
+              border: '1px solid rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              animation: 'slideDown 0.3s ease-out'
+            }}>
+              <p style={{
+                color: '#fff',
+                fontSize: '1rem',
+                textAlign: 'center',
+                marginBottom: '1.5rem',
+                opacity: 0.9
+              }}>
+                Escríbenos y hablamos por WhatsApp en segundos 🚀
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div>
+                  <input
+                    type="text"
+                    name="nombre"
+                    placeholder="Tu Nombre & Apellido*"
+                    value={formData.nombre}
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleFormSubmit();
+                      }
+                    }}
+                    autoComplete="name"
+                    autoFocus={showForm}
+                    enterKeyHint="go"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '1.2rem',
+                      borderRadius: '12px',
+                      border: validationErrors.nombre ? '2px solid #ff6b6b' : '2px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.1)',
+                      color: '#fff',
+                      fontSize: '1.1rem',
+                      outline: 'none',
+                      transition: 'border-color 0.3s',
+                      boxSizing: 'border-box',
+                      minHeight: '48px'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#00B4DB'}
+                    onBlur={(e) => e.target.style.borderColor = validationErrors.nombre ? '#ff6b6b' : 'rgba(255,255,255,0.2)'}
+                  />
+                  {validationErrors.nombre && (
+                    <p style={{
+                      color: '#ff6b6b',
+                      fontSize: '0.9rem',
+                      margin: '0.5rem 0 0 0',
+                      textAlign: 'left'
+                    }}>
+                      {validationErrors.nombre}
+                    </p>
+                  )}
                 </div>
+                
+                <div>
+                  <input
+                    type="tel"
+                    name="telefono"
+                    placeholder="(787) 123-4567 *"
+                    value={formData.telefono}
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleFormSubmit();
+                      }
+                    }}
+                    autoComplete="tel"
+                    inputMode="tel"
+                    enterKeyHint="go"
+                    required
+                    maxLength={14}
+                    style={{
+                      width: '100%',
+                      padding: '1.2rem',
+                      borderRadius: '12px',
+                      border: validationErrors.telefono ? '2px solid #ff6b6b' : '2px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.1)',
+                      color: '#fff',
+                      fontSize: '1.1rem',
+                      outline: 'none',
+                      transition: 'border-color 0.3s',
+                      boxSizing: 'border-box',
+                      minHeight: '48px'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#00B4DB'}
+                    onBlur={(e) => e.target.style.borderColor = validationErrors.telefono ? '#ff6b6b' : 'rgba(255,255,255,0.2)'}
+                  />
+                  {validationErrors.telefono && (
+                    <p style={{
+                      color: '#ff6b6b',
+                      fontSize: '0.9rem',
+                      margin: '0.5rem 0 0 0',
+                      textAlign: 'left'
+                    }}>
+                      {validationErrors.telefono}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <button
+                onClick={handleFormSubmit}
+                disabled={isLoading || isMicroLoading || isSaved}
+                style={{
+                  width: '100%',
+                  background: (isLoading || isMicroLoading || isSaved)
+                    ? 'linear-gradient(135deg, #666 0%, #555 100%)' 
+                    : 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '1rem 2rem',
+                  fontWeight: '600',
+                  fontSize: '1.1rem',
+                  marginTop: '1.5rem',
+                  boxShadow: (isLoading || isMicroLoading || isSaved)
+                    ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
+                    : '0 4px 16px rgba(37, 211, 102, 0.3)',
+                  cursor: (isLoading || isMicroLoading || isSaved) ? 'not-allowed' : 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  opacity: (isLoading || isMicroLoading || isSaved) ? 0.7 : 1,
+                  minHeight: '48px'
+                }}
+                onMouseOver={(e) => {
+                  if (!isLoading && !isMicroLoading && !isSaved) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(37, 211, 102, 0.4)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!isLoading && !isMicroLoading && !isSaved) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(37, 211, 102, 0.3)';
+                  }
+                }}
+              >
+                {isMicroLoading ? (
+                  <>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeDasharray="31.416" strokeDashoffset="31.416">
+                        <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                        <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                      </circle>
+                    </svg>
+                    Conectando con WhatsApp…
+                  </>
+                ) : isLoading ? (
+                  <>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeDasharray="31.416" strokeDashoffset="31.416">
+                        <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                        <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                      </circle>
+                    </svg>
+                    Procesando...
+                  </>
+                ) : isSaved ? (
+                  <>
+                    Guardado ✅ Abriendo WhatsApp…
+                  </>
+                ) : (
+                  <>
+                    ✅ Hablar AHORA por WhatsApp 🚀
+                  </>
+                )}
+              </button>
+              
+              {/* Aviso discreto de WhatsApp */}
+              {showWhatsAppLink && (
+                <div style={{
+                  textAlign: 'center',
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  background: 'rgba(37, 211, 102, 0.1)',
+                  border: '1px solid rgba(37, 211, 102, 0.3)',
+                  borderRadius: '8px'
+                }}>
+                  <p style={{
+                    color: '#25D366',
+                    fontSize: '0.9rem',
+                    margin: '0 0 0.5rem 0',
+                    fontWeight: '500'
+                  }}>
+                    ¿No se abrió WhatsApp?
+                  </p>
+                  <a 
+                    href={`https://wa.me/${professionalInfo.whatsapp}?text=${encodeURIComponent(`Hola! Me llamo ${formData.nombre.trim()}, mi teléfono es ${formData.telefono}. Me gustaría obtener más información sobre sus servicios.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: '#25D366',
+                      textDecoration: 'underline',
+                      fontSize: '0.85rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Abrir chat aquí
+                  </a>
+                </div>
+              )}
+
+              <div style={{
+                textAlign: 'center',
+                marginTop: '1rem',
+                lineHeight: '1.4'
+              }}>
+                <p style={{
+                  color: 'rgba(255,255,255,0.7)',
+                  fontSize: '0.85rem',
+                  margin: '0 0 0.5rem 0'
+                }}>
+                  Tu información está segura y solo se usará para contactarte.
+                </p>
+                <p style={{
+                  color: 'rgba(255,255,255,0.6)',
+                  fontSize: '0.8rem',
+                  margin: '0',
+                  fontWeight: '500'
+                }}>
+                  🔒 Nunca compartimos tu información con terceros.
+                </p>
+              </div>
+
+              {/* Honeypot anti-spam */}
+              <input
+                type="text"
+                name="website"
+                style={{
+                  position: 'absolute',
+                  left: '-9999px',
+                  opacity: 0,
+                  pointerEvents: 'none'
+                }}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
+          )}
 
         </div>
       </div>
